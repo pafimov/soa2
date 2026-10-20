@@ -1,0 +1,1403 @@
+openapi: 3.0.3
+info:
+  title: Marketplace
+  version: 1.0.0
+  description: 'ДЗ №2. Денежные значения передаются JSON-числами с точностью до копейки. Максимум суммы — DECIMAL(12,2).
+    Для каждого запроса возвращается X-Request-Id. Неизвестные пути: ROUTE_NOT_FOUND (404), методы: METHOD_NOT_ALLOWED
+    (405), формат ошибки общий. Тело не больше 1 MiB. Ошибки валидации возвращают details.fields. Неизвестные поля
+    JSON запрещены.'
+servers:
+- url: http://localhost:8080
+security:
+- bearerAuth: []
+paths:
+  /products:
+    post:
+      operationId: createProduct
+      summary: Создать товар. SELLER создаёт свои товары, ADMIN — любые.
+      description: 'Создать товар. SELLER создаёт свои товары, ADMIN — любые.
+
+        Роли: SELLER, ADMIN.'
+      responses:
+        '201':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - SELLER
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+    get:
+      operationId: listProducts
+      summary: 'Список всех товаров, включая ARCHIVED. Фильтры соединяются через AND. Порядок: created_at DESC,
+        id DESC.'
+      description: 'Список всех товаров, включая ARCHIVED. Фильтры соединяются через AND. Порядок: created_at DESC,
+        id DESC.
+
+        Роли: USER, SELLER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - SELLER
+      - ADMIN
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          format: int64
+          default: 0
+          minimum: 0
+          maximum: 10000000
+      - name: size
+        in: query
+        schema:
+          type: integer
+          format: int64
+          default: 20
+          minimum: 1
+          maximum: 100
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProductStatus'
+      - name: category
+        in: query
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description: Точное совпадение, с учётом регистра.
+  /products/{id}:
+    get:
+      operationId: getProduct
+      summary: Получить любой товар.
+      description: 'Получить любой товар.
+
+        Роли: USER, SELLER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - SELLER
+      - ADMIN
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    put:
+      operationId: updateProduct
+      summary: Заменить товар. SELLER — только свой, ADMIN — любой.
+      description: 'Заменить товар. SELLER — только свой, ADMIN — любой.
+
+        Роли: SELLER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - SELLER
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+    delete:
+      operationId: deleteProduct
+      summary: 'Мягкое удаление: ARCHIVED. SELLER — только свой, ADMIN — любой. Повторное удаление возвращает 204.'
+      description: 'Мягкое удаление: ARCHIVED. SELLER — только свой, ADMIN — любой. Повторное удаление возвращает
+        204.
+
+        Роли: SELLER, ADMIN.'
+      responses:
+        '204':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - SELLER
+      - ADMIN
+  /orders:
+    post:
+      operationId: createOrder
+      summary: 'Создать свой заказ. Проверки: лимит CREATE_ORDER, активный заказ, каталог, остатки, промокод. Резерв
+        и запись атомарны.'
+      description: 'Создать свой заказ. Проверки: лимит CREATE_ORDER, активный заказ, каталог, остатки, промокод.
+        Резерв и запись атомарны.
+
+        Роли: USER, ADMIN.'
+      responses:
+        '201':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '422':
+          $ref: '#/components/responses/422'
+        '429':
+          $ref: '#/components/responses/429'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      x-unique-product-ids: true
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      summary: Получить заказ. USER — только свой, ADMIN — любой.
+      description: 'Получить заказ. USER — только свой, ADMIN — любой.
+
+        Роли: USER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - ADMIN
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    put:
+      operationId: updateOrder
+      summary: Обновить позиции. USER — свой заказ, ADMIN — любой. Только CREATED. Лимит UPDATE_ORDER учитывается
+        по пользователю, выполняющему запрос.
+      description: 'Обновить позиции. USER — свой заказ, ADMIN — любой. Только CREATED. Лимит UPDATE_ORDER учитывается
+        по пользователю, выполняющему запрос.
+
+        Промокод проверяется заново; собственное использование не занимает дополнительное место. При сумме ниже
+        минимума промокод снимается. Истёкший/неактивный код даёт 422 и откат всего обновления.
+
+        Роли: USER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '422':
+          $ref: '#/components/responses/422'
+        '429':
+          $ref: '#/components/responses/429'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderUpdate'
+      x-unique-product-ids: true
+  /orders/{id}/cancel:
+    post:
+      operationId: cancelOrder
+      summary: Отменить заказ из CREATED или PAYMENT_PENDING. USER — свой, ADMIN — любой. Возвращаются остатки и
+        одно использование промокода. Повторная отмена — 409.
+      description: 'Отменить заказ из CREATED или PAYMENT_PENDING. USER — свой, ADMIN — любой. Возвращаются остатки
+        и одно использование промокода. Повторная отмена — 409.
+
+        Роли: USER, ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - USER
+      - ADMIN
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  /orders/{id}/status:
+    post:
+      operationId: changeOrderStatus
+      summary: 'Дополнительный метод для ADMIN: CREATED → PAYMENT_PENDING → PAID → SHIPPED → COMPLETED. Только один
+        шаг. Для отмены есть /cancel.'
+      description: 'Дополнительный метод для ADMIN: CREATED → PAYMENT_PENDING → PAID → SHIPPED → COMPLETED. Только
+        один шаг. Для отмены есть /cancel.
+
+        Роли: ADMIN.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusUpdate'
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  /promo-codes:
+    post:
+      operationId: createPromoCode
+      summary: Создать общий промокод.
+      description: 'Создать общий промокод.
+
+        Роли: SELLER, ADMIN.'
+      responses:
+        '201':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoCodeResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '409':
+          $ref: '#/components/responses/409'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+      x-roles:
+      - SELLER
+      - ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoCodeCreate'
+  /auth/register:
+    post:
+      operationId: register
+      summary: Регистрация USER или SELLER. ADMIN создаётся только через переменные окружения.
+      description: 'Регистрация USER или SELLER. ADMIN создаётся только через переменные окружения.
+
+        Без access token.'
+      responses:
+        '201':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '409':
+          $ref: '#/components/responses/409'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+  /auth/login:
+    post:
+      operationId: login
+      summary: 'Войти: access JWT на 15 минут и refresh JWT на 14 дней.'
+      description: 'Войти: access JWT на 15 минут и refresh JWT на 14 дней.
+
+        Без access token.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '401':
+          $ref: '#/components/responses/401'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+  /auth/refresh:
+    post:
+      operationId: refresh
+      summary: Обменять refresh JWT на новую пару. Старый refresh становится недействительным.
+      description: 'Обменять refresh JWT на новую пару. Старый refresh становится недействительным.
+
+        Без access token.'
+      responses:
+        '200':
+          description: Успешно
+          headers:
+            X-Request-Id:
+              description: UUID запроса, создаётся сервером.
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+        '401':
+          $ref: '#/components/responses/401'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'Access JWT. Claim role: USER, SELLER или ADMIN.'
+  schemas:
+    ProductStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - INACTIVE
+      - ARCHIVED
+    OrderStatus:
+      type: string
+      enum:
+      - CREATED
+      - PAYMENT_PENDING
+      - PAID
+      - SHIPPED
+      - COMPLETED
+      - CANCELED
+    Role:
+      type: string
+      enum:
+      - USER
+      - SELLER
+      - ADMIN
+    ProductCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - price
+      - stock
+      - category
+      - status
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 4000
+          nullable: true
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+        stock:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 2147483647
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        seller_id:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Необязателен. SELLER может указать только свой ID. ADMIN может указать ID другого SELLER
+            или ADMIN.
+          x-go-name: SellerID
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - price
+      - stock
+      - category
+      - status
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 4000
+          nullable: true
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+        stock:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 2147483647
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+      description: Полная замена изменяемых полей. seller_id не меняется. stock — свободный остаток, без уже зарезервированных
+        единиц.
+    ProductResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - name
+      - price
+      - stock
+      - category
+      - status
+      - seller_id
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          readOnly: true
+          x-go-name: ID
+          x-go-type-skip-optional-pointer: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          maxLength: 4000
+          nullable: true
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+        stock:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 2147483647
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        seller_id:
+          type: integer
+          format: int64
+          minimum: 1
+          readOnly: true
+          x-go-name: SellerID
+          x-go-type-skip-optional-pointer: true
+        created_at:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        updated_at:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+    ProductPage:
+      type: object
+      additionalProperties: false
+      required:
+      - content
+      - totalElements
+      - page
+      - size
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductResponse'
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+        page:
+          type: integer
+          format: int64
+          minimum: 0
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 100
+    OrderItemInput:
+      type: object
+      additionalProperties: false
+      required:
+      - product_id
+      - quantity
+      properties:
+        product_id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ProductID
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 999
+    OrderItemResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - product_id
+      - quantity
+      - price_at_order
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ID
+        product_id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ProductID
+        quantity:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 999
+        price_at_order:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: PriceAtOrder
+    OrderCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+        promo_code:
+          type: string
+          pattern: ^[A-Z0-9_]{4,20}$
+          nullable: true
+          x-go-name: PromoCode
+      description: product_id в items не повторяются. Стоимость до скидки не больше 9999999999.99.
+    OrderUpdate:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+      description: product_id не повторяются. Только CREATED. Для оставшихся товаров сохраняется price_at_order,
+        для новых берётся текущая цена.
+    OrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - user_id
+      - status
+      - items
+      - total_amount
+      - discount_amount
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ID
+        user_id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: UserID
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        promo_code_id:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+          x-go-name: PromoCodeID
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+          minItems: 1
+          maxItems: 50
+        total_amount:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: TotalAmount
+        discount_amount:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: DiscountAmount
+        created_at:
+          type: string
+          format: date-time
+          x-go-name: CreatedAt
+        updated_at:
+          type: string
+          format: date-time
+          x-go-name: UpdatedAt
+    OrderStatusUpdate:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - PAYMENT_PENDING
+          - PAID
+          - SHIPPED
+          - COMPLETED
+    PromoCodeCreate:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - discount_type
+      - discount_value
+      - min_order_amount
+      - max_uses
+      - valid_from
+      - valid_until
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9_]{4,20}$
+        discount_type:
+          type: string
+          enum:
+          - PERCENTAGE
+          - FIXED_AMOUNT
+          x-go-name: DiscountType
+        discount_value:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: DiscountValue
+        min_order_amount:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: MinOrderAmount
+        max_uses:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 2147483647
+          x-go-name: MaxUses
+        valid_from:
+          type: string
+          format: date-time
+          x-go-name: ValidFrom
+        valid_until:
+          type: string
+          format: date-time
+          x-go-name: ValidUntil
+        active:
+          type: boolean
+          default: true
+      description: valid_until строго позже valid_from. PERCENTAGE выше 70 даёт нулевую скидку, то есть полную цену.
+        FIXED_AMOUNT ограничен суммой заказа.
+    PromoCodeResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - discount_type
+      - discount_value
+      - min_order_amount
+      - max_uses
+      - valid_from
+      - valid_until
+      - active
+      - current_uses
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ID
+        code:
+          type: string
+          pattern: ^[A-Z0-9_]{4,20}$
+        discount_type:
+          type: string
+          enum:
+          - PERCENTAGE
+          - FIXED_AMOUNT
+          x-go-name: DiscountType
+        discount_value:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: DiscountValue
+        min_order_amount:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 9999999999.99
+          multipleOf: 0.01
+          x-go-type: money.Amount
+          x-go-type-import:
+            path: marketplace/internal/money
+            name: money
+          x-go-name: MinOrderAmount
+        max_uses:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 2147483647
+          x-go-name: MaxUses
+        valid_from:
+          type: string
+          format: date-time
+          x-go-name: ValidFrom
+        valid_until:
+          type: string
+          format: date-time
+          x-go-name: ValidUntil
+        active:
+          type: boolean
+          default: true
+        current_uses:
+          type: integer
+          format: int64
+          minimum: 0
+          x-go-name: CurrentUses
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+          maxLength: 254
+          x-go-type: string
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          pattern: ^[ -~]+$
+          writeOnly: true
+          description: 8–72 печатных ASCII-символа.
+          x-go-type-skip-optional-pointer: true
+        role:
+          type: string
+          enum:
+          - USER
+          - SELLER
+          default: USER
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: ^[^\s@]+@[^\s@]+\.[^\s@]+$
+          maxLength: 254
+          x-go-type: string
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          pattern: ^[ -~]+$
+          writeOnly: true
+          x-go-type-skip-optional-pointer: true
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          writeOnly: true
+          x-go-name: RefreshToken
+          x-go-type-skip-optional-pointer: true
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - email
+      - role
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ID
+        email:
+          type: string
+          x-go-type: string
+        role:
+          $ref: '#/components/schemas/Role'
+    AuthTokens:
+      type: object
+      additionalProperties: false
+      required:
+      - access_token
+      - refresh_token
+      - token_type
+      - expires_in
+      properties:
+        access_token:
+          type: string
+          x-go-name: AccessToken
+        refresh_token:
+          type: string
+          x-go-name: RefreshToken
+        token_type:
+          type: string
+          enum:
+          - Bearer
+          x-go-name: TokenType
+        expires_in:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ExpiresIn
+    FieldViolation:
+      type: object
+      additionalProperties: false
+      required:
+      - field
+      - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    StockShortage:
+      type: object
+      additionalProperties: false
+      required:
+      - product_id
+      - requested
+      - available
+      properties:
+        product_id:
+          type: integer
+          format: int64
+          minimum: 1
+          x-go-name: ProductID
+        requested:
+          type: integer
+          format: int64
+          minimum: 1
+        available:
+          type: integer
+          format: int64
+          minimum: 0
+    ErrorDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldViolation'
+          x-go-type-skip-optional-pointer: true
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockShortage'
+          x-go-type-skip-optional-pointer: true
+        retry_after_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+          x-go-name: RetryAfterSeconds
+    ErrorCode:
+      type: string
+      enum:
+      - VALIDATION_ERROR
+      - TOKEN_EXPIRED
+      - TOKEN_INVALID
+      - REFRESH_TOKEN_INVALID
+      - INVALID_CREDENTIALS
+      - ACCESS_DENIED
+      - ORDER_OWNERSHIP_VIOLATION
+      - PRODUCT_NOT_FOUND
+      - ORDER_NOT_FOUND
+      - ROUTE_NOT_FOUND
+      - METHOD_NOT_ALLOWED
+      - PRODUCT_INACTIVE
+      - ORDER_HAS_ACTIVE
+      - INVALID_STATE_TRANSITION
+      - INSUFFICIENT_STOCK
+      - EMAIL_ALREADY_EXISTS
+      - PROMO_CODE_EXISTS
+      - PROMO_CODE_INVALID
+      - PROMO_CODE_MIN_AMOUNT
+      - ORDER_AMOUNT_EXCEEDED
+      - ORDER_LIMIT_EXCEEDED
+      - INTERNAL_ERROR
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error_code
+      - message
+      properties:
+        error_code:
+          $ref: '#/components/schemas/ErrorCode'
+          x-go-name: ErrorCode
+        message:
+          type: string
+        details:
+          $ref: '#/components/schemas/ErrorDetails'
+  responses:
+    '400':
+      description: VALIDATION_ERROR
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '401':
+      description: TOKEN_EXPIRED, TOKEN_INVALID, REFRESH_TOKEN_INVALID, INVALID_CREDENTIALS
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '403':
+      description: ACCESS_DENIED, ORDER_OWNERSHIP_VIOLATION
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '404':
+      description: PRODUCT_NOT_FOUND, ORDER_NOT_FOUND, ROUTE_NOT_FOUND
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '405':
+      description: METHOD_NOT_ALLOWED
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '409':
+      description: PRODUCT_INACTIVE, ORDER_HAS_ACTIVE, INVALID_STATE_TRANSITION, INSUFFICIENT_STOCK, EMAIL_ALREADY_EXISTS,
+        PROMO_CODE_EXISTS
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '422':
+      description: PROMO_CODE_INVALID, PROMO_CODE_MIN_AMOUNT, ORDER_AMOUNT_EXCEEDED
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '429':
+      description: ORDER_LIMIT_EXCEEDED
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '500':
+      description: INTERNAL_ERROR
+      headers:
+        X-Request-Id:
+          description: UUID запроса, создаётся сервером.
+          schema:
+            type: string
+            format: uuid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

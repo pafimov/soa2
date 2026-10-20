@@ -1,0 +1,5 @@
+.git
+.env
+bin
+internal/api/*.gen.go
+coverage.out

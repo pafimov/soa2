@@ -1,0 +1,75 @@
+services:
+  db:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: marketplace
+      POSTGRES_USER: marketplace
+      POSTGRES_PASSWORD: marketplace
+      TZ: UTC
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketplace -d marketplace"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    image: flyway/flyway:11.3.4-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/marketplace
+      FLYWAY_USER: marketplace
+      FLYWAY_PASSWORD: marketplace
+      FLYWAY_CONNECT_RETRIES: 30
+    volumes:
+      - ./db/migration:/flyway/sql:ro
+    command: migrate
+
+  app:
+    build:
+      context: .
+      target: app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      HTTP_ADDR: :8080
+      DATABASE_URL: postgres://marketplace:marketplace@db:5432/marketplace?sslmode=disable
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  migrate-test:
+    image: flyway/flyway:11.3.4-alpine
+    profiles: [tools]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/marketplace_test
+      FLYWAY_USER: marketplace
+      FLYWAY_PASSWORD: marketplace
+      FLYWAY_CONNECT_RETRIES: 30
+    volumes:
+      - ./db/migration:/flyway/sql:ro
+    command: migrate
+
+  test:
+    build:
+      context: .
+      target: test
+    profiles: [tools]
+    environment:
+      TEST_DATABASE_URL: postgres://marketplace:marketplace@db:5432/marketplace_test?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
